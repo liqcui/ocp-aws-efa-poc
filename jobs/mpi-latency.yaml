@@ -1,0 +1,66 @@
+apiVersion: kubeflow.org/v1alpha2
+kind: MPIJob
+metadata:
+  name: osu-efa-test-ompi
+  namespace: default
+spec:
+  slotsPerWorker: 72
+  cleanPodPolicy: Running
+  mpiDistribution: OpenMPI
+  mpiReplicaSpecs:
+    Launcher:
+      replicas: 1
+      template:
+         spec:
+          hostNetwork: true
+          imagePullPolicy: Always
+          restartPolicy: OnFailure
+          containers:
+          - image: quay.io/cgament/mpi:efa
+            name: osu-efa-test-launcher
+            env:
+            - name: PATH
+              value: "/opt/amazon/openmpi/bin:/opt/amazon/efa/bin/:$PATH"
+            - name: LD_LIBRARY_PATH
+              value: "/opt/amazon/openmpi/lib64:/opt/amazon/efa/lib64:$LD_LIBRARY_PATH"
+            - name: OMPI_MCA_mtl_base_verbose
+              value: "100"
+            - name: FI_LOG_LEVEL
+              value: "1"
+            command:
+            - /opt/amazon/openmpi/bin/mpirun
+            - --allow-run-as-root
+            - -np
+            - "2"
+            - -N
+            - "1"
+            - -x
+            - PATH
+            - -x
+            - LD_LIBRARY_PATH
+            - -x
+            - OMPI_MCA_mtl_base_verbose
+            - --map-by
+            - slot
+            - /tmp/osu-micro-benchmarks-5.7.1/mpi/pt2pt/osu_latency
+            # To verify EFA device is working properly comment out line above and uncomment 3 lines below
+            # - /opt/amazon/efa/bin/fi_info
+            # - -p
+            # - efa
+    Worker:
+      replicas: 2
+      template:
+        spec:
+          hostNetwork: true
+          imagePullPolicy: Always
+          containers:
+          - image: quay.io/cgament/mpi:efa
+            name: osu-efa-test-ompi-worker
+            resources:
+              limits:
+                hugepages-2Mi: 5120Mi
+                memory: 154000Mi
+                vpc.amazonaws.com/efa: 1
+              requests:
+                memory: 154000Mi
+                vpc.amazonaws.com/efa: 1
