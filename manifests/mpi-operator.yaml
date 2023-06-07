@@ -343,6 +343,16 @@ metadata:
     kustomize.component: mpi-operator
   name: mpi-operator
 rules:
+- apiGroups: 
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs: 
+  - get
+  - list
+  - watch
+  - create
+  - update
 - apiGroups:
   - ""
   resources:
